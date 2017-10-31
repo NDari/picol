@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/lain-dono/picol.go"
+	"github.com/shanmuganandh/picol"
 	"io/ioutil"
 	"os"
 )
