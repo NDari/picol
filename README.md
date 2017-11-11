@@ -1,5 +1,24 @@
 # picol.go
 
+### Motivation
+
+Wanted to a minimal Tcl implementation, which could be used as an experimental
+extention mechanism for golang projects.
+
+#### TODO
++ Support interface{} as the command argument type of string
++ Reduce memory allocations, like instead of using string type use byte
+  array as parser input and tokens would be byte slices on the source array.
++ More test-cases
+
+
+#### Won't do
++ Comprehensiveness & compatibility with the standard Tcl implementation
++ Tcl standard library
+
+
+### Old Readme
+
 Original http://oldblog.antirez.com/post/picol.html
 
 Sample use:
@@ -26,6 +45,3 @@ func CommandPuts(i *picol.Interp, argv []string, pd interface{}) (string, error)
 	}
 ```
 
-
-I forked this forked this prokect because there was a bug in the parser.go file that prevented it from compiling.
-Also, the project name also janked the golang tools.
