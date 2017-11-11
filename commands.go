@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-func ArityErr(i *Interp, name string, argv []string) error {
-	return fmt.Errorf("Wrong number of args for %s %s", name, argv)
+func ArityErr(i *Interp, name string, argv []interface{}) error {
+	return fmt.Errorf("Wrong number of args for %s %#v", name, argv)
 }
 
-func CommandMath(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandMath(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 3 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	a, _ := strconv.Atoi(argv[1])
-	b, _ := strconv.Atoi(argv[2])
+	a, _ := strconv.Atoi(argv[1].(string))
+	b, _ := strconv.Atoi(argv[2].(string))
 	var c int
 	switch {
 	case argv[0] == "+":
@@ -56,53 +56,53 @@ func CommandMath(i *Interp, argv []string, pd interface{}) (string, error) {
 	return fmt.Sprintf("%d", c), nil
 }
 
-func CommandSet(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandSet(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 3 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	i.SetVar(argv[1], argv[2])
-	return argv[2], nil
+	i.SetVar(argv[1].(string), argv[2])
+	return argv[2].(string), nil
 }
 
-func CommandUnset(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandUnset(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 2 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	i.UnsetVar(argv[1])
+	i.UnsetVar(argv[1].(string))
 	return "", nil
 }
 
-func CommandIf(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandIf(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 3 && len(argv) != 5 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
 
-	result, err := i.Eval(argv[1])
+	result, err := i.Eval(argv[1].(string))
 	if err != nil {
 		return "", err
 	}
 
-	if r, _ := strconv.Atoi(result); r != 0 {
-		return i.Eval(argv[2])
+	if r, _ := strconv.Atoi(result.(string)); r != 0 {
+		return i.Eval(argv[2].(string))
 	} else if len(argv) == 5 {
-		return i.Eval(argv[4])
+		return i.Eval(argv[4].(string))
 	}
 
 	return result, nil
 }
 
-func CommandWhile(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandWhile(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 3 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
 
 	for {
-		result, err := i.Eval(argv[1])
+		result, err := i.Eval(argv[1].(string))
 		if err != nil {
 			return "", err
 		}
-		if r, _ := strconv.Atoi(result); r != 0 {
-			result, err := i.Eval(argv[2])
+		if r, _ := strconv.Atoi(result.(string)); r != 0 {
+			result, err := i.Eval(argv[2].(string))
 			switch err {
 			case PICOL_CONTINUE, nil:
 				//pass
@@ -117,11 +117,11 @@ func CommandWhile(i *Interp, argv []string, pd interface{}) (string, error) {
 	}
 }
 
-func CommandRetCodes(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandRetCodes(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 1 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	switch argv[0] {
+	switch argv[0].(string) {
 	case "break":
 		return "", PICOL_BREAK
 	case "continue":
@@ -130,7 +130,7 @@ func CommandRetCodes(i *Interp, argv []string, pd interface{}) (string, error) {
 	return "", nil
 }
 
-func CommandCallProc(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandCallProc(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	var x []string
 
 	if pd, ok := pd.([]string); ok {
@@ -139,7 +139,7 @@ func CommandCallProc(i *Interp, argv []string, pd interface{}) (string, error) {
 		return "", nil
 	}
 
-	i.callframe = &CallFrame{vars: make(map[string]Var), parent: i.callframe}
+	i.callframe = &CallFrame{vars: make(map[string]interface{}), parent: i.callframe}
 	defer func() { i.callframe = i.callframe.parent }() // remove the called proc callframe
 
 	arity := 0
@@ -163,29 +163,29 @@ func CommandCallProc(i *Interp, argv []string, pd interface{}) (string, error) {
 	return result, err
 }
 
-func CommandProc(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandProc(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 4 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	return "", i.RegisterCommand(argv[1], CommandCallProc, []string{argv[2], argv[3]})
+	return "", i.RegisterCommand(argv[1].(string), CommandCallProc, []string{argv[2].(string), argv[3].(string)})
 }
 
-func CommandReturn(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandReturn(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 1 && len(argv) != 2 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
 	var r string
 	if len(argv) == 2 {
-		r = argv[1]
+		r = argv[1].(string)
 	}
 	return r, PICOL_RETURN
 }
 
-func CommandError(i *Interp, argv []string, pd interface{}) (string, error) {
+func CommandError(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 1 && len(argv) != 2 {
-		return "", ArityErr(i, argv[0], argv)
+		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	return "", fmt.Errorf(argv[1])
+	return "", fmt.Errorf(argv[1].(string))
 }
 
 func (i *Interp) RegisterCoreCommands() {

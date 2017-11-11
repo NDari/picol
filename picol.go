@@ -10,43 +10,57 @@ var (
 	PICOL_RETURN   = errors.New("RETURN")
 	PICOL_BREAK    = errors.New("BREAK")
 	PICOL_CONTINUE = errors.New("CONTINUE")
+	UNDEFINED_VAR  = errors.New("Undefined variable")
+	CMD_EXISTS     = errors.New("Command with the given name is already registered")
 )
 
-type Var string
-type CmdFunc func(i *Interp, argv []string, privdata interface{}) (string, error)
+// Not sure if this explicit type for interface it required, I would just go
+// with inteface{} in all places, but lets this be there for now.
+type Var interface{}
+
+// by default, all args are assumed to be strings, I am changing them to
+// interface{}, so we could pass custom data type objects to the commands, the
+// return type should also be interface{} instead of the default string
+type CmdFunc func(i *Interp, argv []interface{}, privdata interface{}) (interface{}, error)
+
 type Cmd struct {
 	fn       CmdFunc
 	privdata interface{}
 }
+
 type CallFrame struct {
-	vars   map[string]Var
+	vars   map[string]interface{}
 	parent *CallFrame
 }
+
 type Interp struct {
 	level     int
-	callframe *CallFrame
+	callframe *CallFrame // always points to current procedure call frame
 	commands  map[string]Cmd
 }
 
 func InitInterp() *Interp {
 	return &Interp{
 		level:     0,
-		callframe: &CallFrame{vars: make(map[string]Var)},
+		callframe: &CallFrame{vars: make(map[string]interface{})},
 		commands:  make(map[string]Cmd),
 	}
 }
 
-func (i *Interp) Var(name string) (Var, bool) {
+// Looks up for variables by iterating through the call frames, starting with
+// the current to the root call frame, till a variable name match is found.
+func (i *Interp) Var(name string) (interface{}, error) {
 	for frame := i.callframe; frame != nil; frame = frame.parent {
 		v, ok := frame.vars[name]
 		if ok {
-			return v, ok
+			return v, nil
 		}
 	}
-	return "", false
+	return "", UNDEFINED_VAR
 }
-func (i *Interp) SetVar(name, val string) {
-	i.callframe.vars[name] = Var(val)
+
+func (i *Interp) SetVar(name string, val interface{}) {
+	i.callframe.vars[name] = val
 }
 
 func (i *Interp) UnsetVar(name string) {
@@ -64,7 +78,7 @@ func (i *Interp) Command(name string) *Cmd {
 func (i *Interp) RegisterCommand(name string, fn CmdFunc, privdata interface{}) error {
 	c := i.Command(name)
 	if c != nil {
-		return fmt.Errorf("Command '%s' already defined", name)
+		return CMD_EXISTS
 	}
 
 	i.commands[name] = Cmd{fn, privdata}
@@ -72,12 +86,17 @@ func (i *Interp) RegisterCommand(name string, fn CmdFunc, privdata interface{}) 
 }
 
 /* EVAL! */
-func (i *Interp) Eval(t string) (string, error) {
+// Ideally Eval should take interface{}, which would help us either evaluate a
+// string or an already parsed lexical tokens. For now we are starting with
+// string and we could optimize on this at a later stage when we rewrite our
+// parser module.
+func (i *Interp) Eval(t string) (interface{}, error) {
 	p := InitParser(t)
-	var result string
+	var result interface{}
 	var err error
 
-	argv := []string{}
+	argv := []interface{}{}
+	var ir interface{}
 
 	for {
 		prevtype := p.Type
@@ -89,20 +108,23 @@ func (i *Interp) Eval(t string) (string, error) {
 
 		switch p.Type {
 		case PT_VAR:
-			v, ok := i.Var(t)
-			if !ok {
-				return "", fmt.Errorf("No such variable '%s'", t)
+			v, err := i.Var(t)
+			if err != nil {
+				return "", UNDEFINED_VAR
 			}
-			t = string(v)
+			ir = v
 		case PT_CMD:
 			result, err = i.Eval(t)
 			if err != nil {
+				// error in evaluating the argument
 				return result, err
 			} else {
-				t = result
+				ir = result
 			}
-		case PT_ESC:
-			// XXX: escape handling missing!
+		case PT_ESC, PT_STR:
+			// when the token is a simple string and requires no further
+			// processing like variable substitution or command substitution
+			ir = t
 		case PT_SEP:
 			prevtype = p.Type
 			continue
@@ -112,7 +134,7 @@ func (i *Interp) Eval(t string) (string, error) {
 		if p.Type == PT_EOL {
 			prevtype = p.Type
 			if len(argv) != 0 {
-				c := i.Command(argv[0])
+				c := i.Command(argv[0].(string))
 				if c == nil {
 					return "", fmt.Errorf("No such command '%s'", argv[0])
 				}
@@ -122,15 +144,15 @@ func (i *Interp) Eval(t string) (string, error) {
 				}
 			}
 			// Prepare for the next command
-			argv = []string{}
+			argv = []interface{}{}
 			continue
 		}
 
 		// We have a new token, append to the previous or as new arg?
 		if prevtype == PT_SEP || prevtype == PT_EOL {
-			argv = append(argv, t)
-		} else { // Interpolation
-			argv[len(argv)-1] = strings.Join([]string{argv[len(argv)-1], t}, "")
+			argv = append(argv, ir)
+		} else { // String interpolation: variable substitution, command substitution
+			argv[len(argv)-1] = strings.Join([]string{argv[len(argv)-1].(string), ir.(string)}, "")
 		}
 		prevtype = p.Type
 	}

@@ -11,9 +11,9 @@ import (
 
 var fname = flag.String("f", "", "file name")
 
-func CommandPuts(i *picol.Interp, argv []string, pd interface{}) (string, error) {
+func CommandPuts(i *picol.Interp, argv []interface{}, pd interface{}) (interface{}, error) {
 	if len(argv) != 2 {
-		return "", fmt.Errorf("Wrong number of args for %s %s", argv[0], argv)
+		return "", fmt.Errorf("Wrong number of args for %s %s", argv[0].(string), argv)
 	}
 	fmt.Println(argv[1])
 	return "", nil
@@ -37,7 +37,7 @@ func main() {
 			scanner := bufio.NewReader(os.Stdin)
 			clibuf, _ := scanner.ReadString('\n')
 			result, err := interp.Eval(clibuf[:len(clibuf)-1])
-			if len(result) != 0 {
+			if len(result.(string)) != 0 {
 				fmt.Println("ERRROR", result, err)
 			}
 		}
