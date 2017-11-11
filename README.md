@@ -2,11 +2,11 @@
 
 ### Motivation
 
-Wanted to a minimal Tcl implementation, which could be used as an experimental
+Wanted a minimal Tcl implementation, which could be used as an experimental
 extention mechanism for golang projects.
 
 #### TODO
-+ Support interface{} as the command argument type of string
++ Support interface{} as the command argument and return type instead of string
 + Reduce memory allocations, like instead of using string type use byte
   array as parser input and tokens would be byte slices on the source array.
 + More test-cases
