@@ -7,8 +7,7 @@ extention mechanism for golang projects.
 
 #### TODO
 + Support interface{} as the command argument and return type instead of string
-+ Reduce memory allocations, like instead of using string type use byte
-  array as parser input and tokens would be byte slices on the source array.
++ Reduce memory allocations, review the parser implementation to reduce operations, which would create string copies.
 + More test-cases
 
 
