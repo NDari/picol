@@ -19,11 +19,18 @@ func CommandPuts(i *picol.Interp, argv []interface{}, pd interface{}) (interface
 	return "", nil
 }
 
+func LoadedInterp() *picol.Interp {
+	i := picol.InitInterp()
+	i.RegisterCoreCommands()
+	i.RegisterCommand("puts", CommandPuts, nil)
+
+	return i
+}
+
 func main() {
 	flag.Parse()
-	interp := picol.InitInterp()
-	interp.RegisterCoreCommands()
-	interp.RegisterCommand("puts", CommandPuts, nil)
+
+	interp := LoadedInterp()
 
 	buf, err := ioutil.ReadFile(*fname)
 	if err == nil {
