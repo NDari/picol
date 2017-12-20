@@ -61,7 +61,8 @@ func CommandSet(i *Interp, argv []interface{}, pd interface{}) (interface{}, err
 		return "", ArityErr(i, argv[0].(string), argv)
 	}
 	i.SetVar(argv[1].(string), argv[2])
-	return argv[2].(string), nil
+
+	return "", nil
 }
 
 func CommandUnset(i *Interp, argv []interface{}, pd interface{}) (interface{}, error) {
