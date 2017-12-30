@@ -175,9 +175,11 @@ func CommandReturn(i *Interp, argv []interface{}, pd interface{}) (interface{}, 
 	if len(argv) != 1 && len(argv) != 2 {
 		return "", ArityErr(i, argv[0].(string), argv)
 	}
-	var r string
+
+	// return type need be restricted to string
+	var r interface{}
 	if len(argv) == 2 {
-		r = argv[1].(string)
+		r = argv[1]
 	}
 	return r, PICOL_RETURN
 }
